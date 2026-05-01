@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算術修行 〜方程式の陣〜</title>
+    <style>
+        :root {
+            --yo: #0a1128; /* 夜空（深い青） */
+            --tsuki: #f0f8ff; /* 月光（白青） */
+            --gin: #a8b2c1; /* 銀色 */
+            --kurenai: #e63946; /* 警告の紅 */
+            --shian: #00e5ff; /* 攻撃力のシアン */
+        }
+        body {
+            font-family: "Sawarabi Mincho", "Hiragino Mincho ProN", serif;
+            text-align: center;
+            background-color: var(--yo);
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--tsuki);
+            margin: 0;
+            padding: 15px;
+            transition: background-color 0.1s;
+        }
+        #game-container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 25px;
+            background: rgba(10, 17, 40, 0.9);
+            border: 2px solid var(--gin);
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+        }
+        h1 {
+            font-size: 26px;
+            color: var(--tsuki);
+            margin-top: 0;
+            border-bottom: 1px solid var(--gin);
+            padding-bottom: 10px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        /* 解説・設定 */
+        .info-box {
+            background-color: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 3px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 13px;
+            border-left: 4px solid var(--shian);
+        }
+        .info-box h4 { margin: 0 0 8px 0; color: var(--shian); font-size: 15px; }
+        .info-box ul { padding-left: 20px; margin: 0; }
+        .info-box li { margin-bottom: 4px; }
+        .settings-box { border: 1px dashed var(--gin); padding: 15px; margin-bottom: 20px; text-align: left; }
+        h3 { font-size: 14px; margin: 0 0 10px 0; color: var(--gin); }
+        .checkbox-group label, .radio-group label { display: inline-block; margin-right: 15px; cursor: pointer; font-size: 15px; margin-bottom: 5px;}
+
+        /* ゲーム画面 */
+        #question {
+            font-size: 44px;
+            margin: 30px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 0 0 15px var(--shian);
+            font-family: 'Arial', sans-serif; /* 数式が見やすいように変更 */
+        }
+        #timer { font-size: 26px; color: var(--shian); font-weight: bold; }
+        #score-display { font-size: 20px; color: var(--gin); margin-bottom: 10px; }
+
+        /* 選択肢ボタン */
+        #choices { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        .choice-btn {
+            flex: 1 1 40%;
+            font-size: 28px;
+            padding: 15px 5px;
+            background: rgba(255,255,255,0.1);
+            color: var(--tsuki);
+            border: 1px solid var(--gin);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            transition: 0.1s;
+        }
+        .choice-btn:active { background: var(--shian); color: var(--yo); transform: scale(0.95); }
+        
+        .prefix { font-size: 16px; margin-right: 5px; color: #888; } /* x= の表記用 */
+
+        /* 開始ボタン */
+        .start-btn {
+            font-size: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #005f73, #0a9396);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #002f3a;
+        }
+        .start-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* リザルト */
+        .atk-label { font-size: 18px; color: var(--gin); margin-bottom: 0; }
+        .atk-value { font-size: 72px; color: var(--shian); text-shadow: 0 0 20px var(--shian); margin: 0; font-family: 'Arial', sans-serif; }
+        .rank-badge { font-size: 60px; margin-top: -5px; color: white; font-weight: bold; letter-spacing: 2px;}
+        
+        .detail-box { background: rgba(0,0,0,0.3); padding: 15px; font-size: 14px; text-align: left; border: 1px solid #444; margin: 15px 0; border-radius: 4px; }
+        .detail-item { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0; }
+        .detail-label { color: #aaa; }
+        .detail-value { color: #fff; font-weight: bold; }
+        .mistake-value { color: var(--kurenai); font-weight: bold; }
+        
+        .shake { animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -2px); } 100% { transform: translate(2px, -2px); } }
+        .hidden { display: none !important; }
+
+        /* 斬撃エフェクト（青） */
+        .slash { position: absolute; top: 50%; left: 0; width: 100%; height: 3px; background: var(--shian); transform: rotate(-10deg); opacity: 0; pointer-events: none; box-shadow: 0 0 10px var(--shian); }
+        .slash-anim { animation: slashEffect 0.2s ease-out; }
+        @keyframes slashEffect { 0% { opacity: 1; width: 0; } 100% { opacity: 0; width: 100%; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="slash-line" class="slash"></div>
+
+    <div id="start-screen">
+        <h1>算術修行 〜方程式の陣〜</h1>
+        
+        <div class="info-box">
+            <h4>【移項の理（ルール）】</h4>
+            <ul>
+                <li>「x ＝ ◯」の形になるように、頭の中で式を変形せよ。</li>
+                <li><span style="color:var(--shian);">「両辺にxがある型」</span>を選ぶと、得られる攻撃力が激増する。</li>
+                <li><span style="color:var(--kurenai); font-weight:bold;">【掟】計算ミスをすると、時間が1秒減少する。</span></li>
+            </ul>
+        </div>
+
+        <div class="settings-box">
+            <h3>陣立て（出題レベル）※複数選択可</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="lvl-1" checked> 基礎 (x+A=B)</label><br>
+                <label><input type="checkbox" id="lvl-2" checked> 係数 (Ax=B)</label><br>
+                <label><input type="checkbox" id="lvl-3"> 2段階 (Ax+B=C)</label><br>
+                <label><input type="checkbox" id="lvl-4"> 両辺x (Ax+B=Cx+D)</label>
+            </div>
+            <br>
+            <h3>標的数（選択肢）</h3>
+            <div class="radio-group">
+                <label><input type="radio" name="choiceCount" value="2"> 二</label>
+                <label><input type="radio" name="choiceCount" value="3"> 三</label>
+                <label><input type="radio" name="choiceCount" value="4" checked> 四</label>
+            </div>
+        </div>
+        <button class="start-btn" onclick="startGame()">修行開始！</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="timer">残り時間：30</div>
+        <div id="score-display">突破数：0</div>
+        <div id="question"></div>
+        <div id="choices"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <p class="atk-label">ー 総 攻撃力 ー</p>
+        <h2 id="final-atk" class="atk-value">0</h2>
+        <div id="rank-display" class="rank-badge">-</div>
+        
+        <div class="detail-box">
+            <div class="detail-item"><span class="detail-label">プレイ日時</span><span id="res-datetime" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">正解突破数</span><span id="res-count" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">打ち損じ（ミス）</span><span id="res-mistakes" class="mistake-value"></span></div>
+            <div class="detail-item"><span class="detail-label">挑んだレベル</span><span id="res-ops" class="detail-value"></span></div>
+            <div class="detail-item"><span class="detail-label">連続修行数</span><span id="res-playcount" class="detail-value" style="color:var(--shian)"></span></div>
+        </div>
+
+        <button class="start-btn" onclick="retryGame()">再修行！</button>
+        <p style="margin-top:15px; color:var(--gin); cursor:pointer; text-decoration:underline; font-size:14px;" onclick="location.reload()">設定に戻る</p>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let mistakeCount = 0;
+    let timeLeft = 30;
+    let correctAnswer; // 今回は x の値（整数）
+    let timerId;
+    let activeLevels = [];
+    let numChoices = 4;
+    let totalPlayCount = 0;
+
+    function startGame() {
+        activeLevels = [];
+        if (document.getElementById('lvl-1').checked) activeLevels.push(1);
+        if (document.getElementById('lvl-2').checked) activeLevels.push(2);
+        if (document.getElementById('lvl-3').checked) activeLevels.push(3);
+        if (document.getElementById('lvl-4').checked) activeLevels.push(4);
+
+        if (activeLevels.length === 0) { alert('少なくとも1つのレベルを選んでください。'); return; }
+
+        numChoices = parseInt(document.querySelector('input[name="choiceCount"]:checked').value);
+        totalPlayCount++;
+
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('result-screen').classList.add('hidden');
+        
+        score = 0;
+        mistakeCount = 0;
+        timeLeft = 30;
+        document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
+        document.getElementById('score-display').textContent = `突破数：${score}`;
+        
+        nextQuestion();
+        
+        timerId = setInterval(() => {
+            timeLeft--;
+            if (timeLeft < 0) timeLeft = 0;
+            document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
+            
+            if (timeLeft <= 5 && timeLeft > 0) document.body.classList.add('shake');
+            else document.body.classList.remove('shake');
+            
+            if (timeLeft <= 0) endGame();
+        }, 1000);
+    }
+
+    function retryGame() { startGame(); }
+
+    // 式を綺麗にフォーマットする関数 (例: 1x -> x, + -3 -> - 3)
+    function formatSide(a, b) {
+        let res = "";
+        if (a !== 0) {
+            if (a === 1) res += "x";
+            else if (a === -1) res += "-x";
+            else res += a + "x";
+        }
+        if (b !== 0) {
+            if (res === "") {
+                res += b;
+            } else {
+                res += (b > 0) ? " + " + b : " - " + Math.abs(b);
+            }
+        }
+        if (a === 0 && b === 0) res = "0";
+        return res;
+    }
+
+    function nextQuestion() {
+        const lvl = activeLevels[Math.floor(Math.random() * activeLevels.length)];
+        let qText = "";
+        
+        // 答え(x)は -10 ～ 10 (0は除く)
+        let x = Math.floor(Math.random() * 21) - 10;
+        if (x === 0) x = 3; 
+        correctAnswer = x;
+
+        if (lvl === 1) {
+            // 基礎: x + A = B または x - A = B
+            let a = Math.floor(Math.random() * 15) + 1;
+            let isPlus = Math.random() > 0.5;
+            let b = isPlus ? (x + a) : (x - a);
+            qText = isPlus ? `x + ${a} = ${b}` : `x - ${a} = ${b}`;
+        
+        } else if (lvl === 2) {
+            // 係数: Ax = B
+            let a = Math.floor(Math.random() * 9) + 2; 
+            if (Math.random() > 0.5) a = -a; // マイナスの係数も出す
+            let b = a * x;
+            qText = `${a === -1 ? '-' : a}x = ${b}`;
+        
+        } else if (lvl === 3) {
+            // 2段階: Ax + B = C
+            let a = Math.floor(Math.random() * 8) + 2;
+            if (Math.random() > 0.5) a = -a;
+            let b = Math.floor(Math.random() * 21) - 10;
+            if (b === 0) b = 5;
+            let c = (a * x) + b;
+            qText = `${formatSide(a, b)} = ${c}`;
+        
+        } else if (lvl === 4) {
+            // 両辺x: Ax + B = Cx + D
+            let a, c;
+            do {
+                a = Math.floor(Math.random() * 11) - 5;
+                c = Math.floor(Math.random() * 11) - 5;
+            } while (a === c || a === 0 || c === 0); // xが消えないようにする
+
+            let b = Math.floor(Math.random() * 21) - 10;
+            let d = (a * x + b) - (c * x); // Ax + B = Cx + D となるように調整
+            qText = `${formatSide(a, b)} = ${formatSide(c, d)}`;
+        }
+
+        document.getElementById('question').textContent = qText;
+
+        // 選択肢生成
+        let options = [correctAnswer];
+        let loopCount = 0;
+        while (options.length < numChoices && loopCount < 50) {
+            loopCount++;
+            let offset = Math.floor(Math.random() * 11) - 5;
+            if (offset === 0) continue;
+            
+            // 符号間違いのトラップを意図的に入れる
+            let wrong;
+            if (Math.random() > 0.7 && !options.includes(-correctAnswer)) {
+                wrong = -correctAnswer;
+            } else {
+                wrong = correctAnswer + offset;
+            }
+
+            if (wrong !== correctAnswer && !options.includes(wrong)) {
+                options.push(wrong);
+            }
+        }
+
+        options.sort(() => Math.random() - 0.5);
+        const choicesDiv = document.getElementById('choices');
+        choicesDiv.innerHTML = '';
+        
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerHTML = `<span class="prefix">x = </span>${opt}`; // 答えが分かりやすいように「x=」をつける
+            btn.onclick = () => {
+                if (opt === correctAnswer) {
+                    score++;
+                    document.getElementById('score-display').textContent = `突破数：${score}`;
+                    triggerSlash();
+                    nextQuestion();
+                } else {
+                    mistakeCount++;
+                    timeLeft -= 1;
+                    if (timeLeft < 0) timeLeft = 0;
+                    document.getElementById('timer').textContent = `残り時間：${timeLeft}`;
+                    
+                    document.body.style.backgroundColor = 'var(--kurenai)';
+                    setTimeout(() => {
+                        document.body.style.backgroundColor = 'var(--yo)';
+                    }, 100);
+                    
+                    if (timeLeft <= 0) endGame();
+                }
+            };
+            choicesDiv.appendChild(btn);
+        });
+    }
+
+    function triggerSlash() {
+        const slash = document.getElementById('slash-line');
+        slash.classList.remove('slash-anim');
+        void slash.offsetWidth;
+        slash.classList.add('slash-anim');
+    }
+
+    function endGame() {
+        clearInterval(timerId);
+        document.body.classList.remove('shake');
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+
+        const now = new Date();
+        const dateStr = `${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        // 方程式は難易度が高いので、ベーススコアを高めに設定
+        let choiceMult = 1 + (numChoices - 2) * 0.3;
+        
+        // レベルによる倍率（高難易度ほどスコアが跳ね上がる）
+        let lvlBonus = 0;
+        if (activeLevels.includes(1)) lvlBonus += 0.1;
+        if (activeLevels.includes(2)) lvlBonus += 0.2;
+        if (activeLevels.includes(3)) lvlBonus += 0.5;
+        if (activeLevels.includes(4)) lvlBonus += 0.8;
+
+        let finalAtk = Math.floor(score * 150 * choiceMult * (1 + lvlBonus));
+        
+        // 演出
+        let currentAtk = 0;
+        let step = Math.ceil(finalAtk / 30);
+        if (step === 0) step = 1;
+        let counter = setInterval(() => {
+            currentAtk += step;
+            if (currentAtk >= finalAtk) {
+                currentAtk = finalAtk;
+                clearInterval(counter);
+                showRank(finalAtk);
+            }
+            document.getElementById('final-atk').textContent = currentAtk.toLocaleString();
+        }, 30);
+
+        document.getElementById('res-datetime').textContent = dateStr;
+        document.getElementById('res-count').textContent = `${score} 問`;
+        document.getElementById('res-mistakes').textContent = `${mistakeCount} 回`;
+        
+        // 選んだレベルを分かりやすく表示
+        let lvlNames = activeLevels.map(l => {
+            if(l===1) return '基礎'; if(l===2) return '係数';
+            if(l===3) return '2段階'; return '両辺x';
+        });
+        document.getElementById('res-ops').textContent = lvlNames.join(' / ');
+        document.getElementById('res-playcount').textContent = `${totalPlayCount} 回目`;
+    }
+
+    function showRank(atk) {
+        let rank = '見習い'; let color = '#aaa';
+        if (atk >= 8000) { rank = '龍神'; color = 'var(--shian)'; } // 新しい最高ランク
+        else if (atk >= 5000) { rank = '剣聖'; color = '#ffd700'; }
+        else if (atk >= 3000) { rank = '将軍'; color = '#ff69b4'; }
+        else if (atk >= 1500) { rank = '侍'; color = '#00ff00'; }
+        
+        const rd = document.getElementById('rank-display');
+        rd.textContent = rank;
+        rd.style.color = color;
+        rd.style.textShadow = `0 0 20px ${color}`;
+    }
+</script>
+</body>
+</html>
